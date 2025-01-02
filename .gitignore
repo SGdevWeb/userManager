@@ -1,0 +1,9 @@
+# Ignorer node_modules dans tous les dossiers
+node_modules/
+
+# Ignorer les fichiers de build
+/dist/
+/build/
+
+# Ignorer les fichiers d'environnement
+.env
