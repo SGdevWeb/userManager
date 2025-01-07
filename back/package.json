@@ -3,8 +3,13 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "start": "nodemon index.js"
+  },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.21.2",
-    "node-ssh": "^13.2.0"
+    "node-ssh": "^13.2.0",
+    "nodemon": "^3.1.9"
   }
 }
