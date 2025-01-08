@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import axios from "axios";
 
+const apiUrl = import.meta.env.VITE_REACT_APP_API_URL;
+
 function App() {
   const [servers, setServers] = useState([]);
   const [users, setUsers] = useState([]);
@@ -40,7 +42,7 @@ function App() {
 
   const fetchServers = () => {
     axios
-      .get("http://localhost:3000/servers")
+      .get(`${apiUrl}/servers`)
       .then((response) => setServers(response.data))
       .catch((error) =>
         console.error("Erreur lors de la récupération des serveurs", error)
@@ -48,7 +50,7 @@ function App() {
   };
 
   const handleDeleteServer = (ip) => {
-    axios.delete(`http://localhost:3000/delete-server/${ip}`).then(() => {
+    axios.delete(`${apiUrl}/delete-server/${ip}`).then(() => {
       fetchServers();
     });
   };
@@ -67,7 +69,7 @@ function App() {
     }
 
     axios
-      .put(`http://localhost:3000/update-server/${editServer.ip}`, {
+      .put(`${apiUrl}/update-server/${editServer.ip}`, {
         name,
         username,
         port,
@@ -91,7 +93,7 @@ function App() {
       return;
     }
     axios
-      .post("http://localhost:3000/users", {
+      .post(`${apiUrl}/users`, {
         ip: selectedServer.ip,
         username: selectedServer.username,
         password: adminPassword,
@@ -136,18 +138,16 @@ function App() {
   };
 
   const addServer = () => {
-    axios
-      .post("http://localhost:3000/add-server", newServer)
-      .then((response) => {
-        setServers([...servers, response.data]);
-        setNewServer({
-          ip: "",
-          name: "",
-          admin: "",
-          port: "",
-        });
-        setShowAddServerForm(false);
+    axios.post(`${apiUrl}/add-server`, newServer).then((response) => {
+      setServers([...servers, response.data]);
+      setNewServer({
+        ip: "",
+        name: "",
+        admin: "",
+        port: "",
       });
+      setShowAddServerForm(false);
+    });
   };
 
   const handleServerClick = (server) => {
@@ -190,7 +190,7 @@ function App() {
     }
 
     try {
-      const response = await axios.post("http://localhost:3000/delete-user", {
+      const response = await axios.post(`${apiUrl}/delete-user`, {
         ip: selectedServer.ip,
         username: selectedServer.username,
         password: adminPassword,
@@ -235,7 +235,7 @@ function App() {
     }
 
     try {
-      const response = await axios.post("http://localhost:3000/add-user", {
+      const response = await axios.post(`${apiUrl}/add-user`, {
         ip: selectedServer.ip,
         port: selectedServer.port,
         username: selectedServer.username,
@@ -272,7 +272,7 @@ function App() {
     }
 
     try {
-      const response = await axios.post("http://localhost:3000/update-user", {
+      const response = await axios.post(`${apiUrl}/update-user`, {
         ip: selectedServer.ip,
         port: selectedServer.port,
         username: selectedServer.username,

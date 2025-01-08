@@ -53,13 +53,13 @@ const mergeAndRemoveDuplicates = (groups1, groups2) => {
 
 // ENDPOINTS SERVEURS
 // Endpoint pour récupérer la liste des serveurs
-app.get("/servers", (req, res) => {
+app.get("/api/servers", (req, res) => {
   const servers = readServers();
   res.json(servers);
 });
 
 // Endpoint pour ajouter un serveur
-app.post("/add-server", (req, res) => {
+app.post("/api/add-server", (req, res) => {
   const { ip, name, admin, port } = req.body;
   const newServer = `${name}:${ip}:${admin}:${port}`;
 
@@ -67,7 +67,7 @@ app.post("/add-server", (req, res) => {
   res.json({ name, ip, admin, port }); // Retourner le serveur ajouté
 });
 
-app.delete("/delete-server/:ip", (req, res) => {
+app.delete("/api/delete-server/:ip", (req, res) => {
   const ip = req.params.ip;
   const servers = readServers();
 
@@ -80,7 +80,7 @@ app.delete("/delete-server/:ip", (req, res) => {
     .json({ success: true, message: "Serveur supprimé avec succès." });
 });
 
-app.put("/update-server/:ip", (req, res) => {
+app.put("/api/update-server/:ip", (req, res) => {
   const oldIp = req.params.ip;
   const { name, newIp, username, port } = req.body;
   const servers = readServers();
@@ -101,7 +101,7 @@ app.put("/update-server/:ip", (req, res) => {
 
 // ENDPOINTS USERS
 // Endpoint pour récupérer la liste des utilisateurs et des groupes d'un serveur
-app.post("/users", async (req, res) => {
+app.post("/api/users", async (req, res) => {
   const { ip, username, password, port } = req.body;
 
   const ssh = new NodeSSH();
@@ -135,7 +135,7 @@ app.post("/users", async (req, res) => {
 });
 
 // Endpoint pour ajouter un utilisateur
-app.post("/add-user", async (req, res) => {
+app.post("/api/add-user", async (req, res) => {
   const { ip, port, username, password, newUser, newPassword } = req.body;
 
   if (!ip || !username || !password || !newUser || !newPassword) {
@@ -169,7 +169,7 @@ app.post("/add-user", async (req, res) => {
 });
 
 // Endpoint pour supprimer un utilisateur
-app.post("/delete-user", async (req, res) => {
+app.post("/api/delete-user", async (req, res) => {
   const { ip, username, password, port, userToDelete } = req.body;
 
   const ssh = new NodeSSH();
@@ -195,7 +195,7 @@ app.post("/delete-user", async (req, res) => {
   }
 });
 
-app.post("/update-user", async (req, res) => {
+app.post("/api/update-user", async (req, res) => {
   const {
     ip,
     port,
