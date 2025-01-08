@@ -1,4 +1,1 @@
-Mint:192.168.1.186:sam:22001
-Serveur2:192.168.1.11:admin:22
-Serveur3:192.168.1.12:admin:22
-Kubuntu:192.168.1.193:sam:22
+Nom_du_serveur:ip_serveur:nom_admin:port_ssh

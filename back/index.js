@@ -2,6 +2,7 @@ const express = require("express");
 const { NodeSSH } = require("node-ssh");
 const fs = require("fs");
 const cors = require("cors");
+const { error } = require("console");
 
 const app = express();
 app.use(express.json());
@@ -11,6 +12,27 @@ app.use(
     origin: "http://localhost:5173",
   })
 );
+
+const readServers = () => {
+  return fs
+    .readFileSync("servers.txt", "utf8")
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => {
+      const [name, ip, username, port] = line.split(":");
+      return { name, ip, username, port };
+    });
+};
+
+const writeServers = (servers) => {
+  const data = servers
+    .map(
+      (server) =>
+        `${server.name}:${server.ip}:${server.username}:${server.port}`
+    )
+    .join("\n");
+  fs.writeFileSync("servers.txt", data);
+};
 
 const getGroupsWithHighGID = async (ssh) => {
   const groupsResult = await ssh.execCommand(
@@ -29,17 +51,10 @@ const mergeAndRemoveDuplicates = (groups1, groups2) => {
   return Array.from(uniqueGroups);
 };
 
+// ENDPOINTS SERVEURS
 // Endpoint pour récupérer la liste des serveurs
 app.get("/servers", (req, res) => {
-  // Liste des serveurs
-  const servers = fs
-    .readFileSync("servers.txt", "utf8")
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line) => {
-      const [name, ip, username, port] = line.split(":");
-      return { name, ip, username, port };
-    });
+  const servers = readServers();
   res.json(servers);
 });
 
@@ -52,6 +67,39 @@ app.post("/add-server", (req, res) => {
   res.json({ name, ip, admin, port }); // Retourner le serveur ajouté
 });
 
+app.delete("/delete-server/:ip", (req, res) => {
+  const ip = req.params.ip;
+  const servers = readServers();
+
+  const updatedServers = servers.filter((server) => server.ip !== ip);
+
+  writeServers(updatedServers);
+
+  res
+    .status(200)
+    .json({ success: true, message: "Serveur supprimé avec succès." });
+});
+
+app.put("/update-server/:ip", (req, res) => {
+  const oldIp = req.params.ip;
+  const { name, newIp, username, port } = req.body;
+  const servers = readServers();
+
+  const updatedServers = servers.map((server) => {
+    if (server.ip === oldIp) {
+      return { name, ip: newIp, username, port };
+    }
+    return server;
+  });
+
+  writeServers(updatedServers);
+
+  res
+    .status(200)
+    .json({ success: true, message: "Serveur mis à jour avec succès" });
+});
+
+// ENDPOINTS USERS
 // Endpoint pour récupérer la liste des utilisateurs et des groupes d'un serveur
 app.post("/users", async (req, res) => {
   const { ip, username, password, port } = req.body;
@@ -64,6 +112,7 @@ app.post("/users", async (req, res) => {
     const result = await ssh.execCommand(
       "grep -E ':[0-9]{4,}:' /etc/passwd | grep -E ':/home/'"
     );
+
     const users = result.stdout
       .split("\n")
       .filter((user) => user.trim() !== "");
@@ -141,6 +190,54 @@ app.post("/delete-user", async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
+  } finally {
+    ssh.dispose();
+  }
+});
+
+app.post("/update-user", async (req, res) => {
+  const {
+    ip,
+    port,
+    username,
+    password,
+    userToUpdate,
+    newUsername,
+    newPassword,
+  } = req.body;
+
+  const ssh = new NodeSSH();
+  try {
+    await ssh.connect({ host: ip, port, username, password });
+
+    if (newUsername && newUsername !== userToUpdate) {
+      const renameResult = await ssh.execCommand(
+        `echo '${password}' | sudo -S usermod -l ${newUsername} ${userToUpdate}`
+      );
+      if (renameResult.code !== 0) {
+        throw new Error(renameResult.stderr);
+      }
+    }
+
+    if (newPassword) {
+      const passwordResult = await ssh.execCommand(
+        `echo '${password}' | sudo -S chpasswd <<< "${
+          newUsername || userToUpdate
+        }:${newPassword}"`
+      );
+      if (passwordResult.code !== 0) {
+        throw new Error(passwordResult.stderr);
+      }
+    }
+
+    res
+      .status(200)
+      .json({ success: true, message: "Utilisateur modifié avec succès." });
+  } catch (error) {
+    console.error("Erreur lors de la modification de l'utilisateur : ", error);
+    res
+      .status(500)
+      .json({ error: "Erreur lors de la modification de l'utilisateur" });
   } finally {
     ssh.dispose();
   }
