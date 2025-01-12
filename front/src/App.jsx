@@ -113,15 +113,24 @@ function App() {
         });
 
         const groupMap = response.data.groups.reduce((acc, line) => {
-          const [groupName, , groupId] = line.split(":");
-          acc[groupId] = groupName; // Associer le GID au nom du groupe
+          const [groupName, , groupId, users] = line.split(":");
+          acc[groupId] = { name: groupName, users: users.split(",") }; // Associer le GID au nom du groupe
           return acc;
         }, {});
 
-        const usersWithGroupNames = parsedUsers.map((user) => ({
-          ...user,
-          groupName: groupMap[user.gid] || "Inconnu",
-        }));
+        const usersWithGroupNames = parsedUsers.map((user) => {
+          const sudoGroup = Object.values(groupMap).find(
+            (group) => group.name === "sudo"
+          );
+          const isSudo = sudoGroup
+            ? sudoGroup.users.includes(user.username)
+            : false;
+          return {
+            ...user,
+            groupName: groupMap[user.gid]?.name || "Inconnu",
+            isSudo,
+          };
+        });
 
         const parsedGroups = response.data.groups.map((line) => {
           const [name, password, GID, users] = line.split(":");
@@ -294,6 +303,31 @@ function App() {
         error
       );
       alert("Erreur lors de la modification de l'utilisateur.");
+    }
+  };
+
+  const handleToggleSudo = async (username) => {
+    if (!adminPassword) {
+      alert("Veuillez saisir le mot de passe administrateur.");
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${apiUrl}/toggle-sudo`, {
+        ip: selectedServer.ip,
+        port: selectedServer.port,
+        username: selectedServer.username,
+        password: adminPassword,
+        userToToggle: username,
+      });
+
+      if (response.data.success) {
+        alert(`Droits sudo modifiés pour l'utilisateur ${username}.`);
+        fetchUsers(adminPassword); // Rafraîchir la liste des utilisateurs
+      }
+    } catch (error) {
+      console.error("Erreur lors de la modification des droits sudo", error);
+      alert("Erreur lors de la modification des droits sudo.");
     }
   };
 
@@ -504,6 +538,14 @@ function App() {
                         onClick={() => handleConfirmDelete(user.username)}
                       >
                         Supprimer
+                      </button>
+                      <button
+                        className="btn btn-info btn-sm ms-2"
+                        onClick={() => handleToggleSudo(user.username)}
+                      >
+                        {user.isSudo
+                          ? "Retirer les droits sudo"
+                          : "Ajouter les droits sudo"}
                       </button>
                     </td>
                   </tr>

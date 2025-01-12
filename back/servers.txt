@@ -1,1 +1,2 @@
 Nom_du_serveur:ip_serveur:nom_admin:port_ssh
+ubuntu:192.168.1.97:sam:22

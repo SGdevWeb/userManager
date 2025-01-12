@@ -243,4 +243,52 @@ app.post("/api/update-user", async (req, res) => {
   }
 });
 
+app.post("/api/toggle-sudo", async (req, res) => {
+  const { ip, port, username, password, userToToggle } = req.body;
+
+  if (!ip || !port || !username || !password || !userToToggle) {
+    return res.status(400).json({ error: "Tous les champs sont obligatoires" });
+  }
+
+  const ssh = new NodeSSH();
+  try {
+    await ssh.connect({ host: ip, port, username, password });
+
+    // Vérifier si l'utilisateur est déjà dans le groupe sudo
+    const checkSudoCommand = `grep '^sudo:' /etc/group`;
+    const checkSudoResult = await ssh.execCommand(checkSudoCommand);
+
+    if (checkSudoResult.code !== 0) {
+      throw new Error("Erreur lors de la vérification des droits sudo.");
+    }
+
+    const isSudo = checkSudoResult.stdout.includes(userToToggle);
+
+    // Ajouter ou retirer l'utilisateur du groupe sudo
+    const toggleSudoCommand = isSudo
+      ? `echo '${password}' | sudo -S deluser ${userToToggle} sudo` // Retirer sudo
+      : `echo '${password}' | sudo -S usermod -aG sudo ${userToToggle}`; // Ajouter sudo
+
+    const toggleSudoResult = await ssh.execCommand(toggleSudoCommand);
+
+    if (toggleSudoResult.code === 0) {
+      res.status(200).json({
+        success: true,
+        message: `Droits sudo ${
+          isSudo ? "retirés" : "ajoutés"
+        } pour l'utilisateur ${userToToggle}.`,
+      });
+    } else {
+      throw new Error(toggleSudoResult.stderr);
+    }
+  } catch (error) {
+    console.error("Erreur lors de la modification des droits sudo :", error);
+    res.status(500).json({
+      error: "Erreur lors de la modification des droits sudo.",
+    });
+  } finally {
+    ssh.dispose();
+  }
+});
+
 app.listen(3000, () => console.log("Serveur en écoute sur le port 3000"));
